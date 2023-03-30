@@ -1,7 +1,9 @@
 import pandas as pd
 from collections import Counter
+from os import path
 
-df = pd.read_csv("C:/Users/lorga/Desktop/Lobby/Artikel/data wrangled.csv")
+dir = path.dirname(__file__)
+df = pd.read_csv(path.join(dir, "data wrangled.csv"))
 
 # Create edges
 
@@ -45,21 +47,21 @@ def member_counter(dict):
 memberships_with_interest_list = member_counter(memberships_dict)
 membership_df = df[df["registerNumber"].isin(memberships_with_interest_list)]
 
-# Save final dataset
+# Save final overall dataset
 
 final_df = pd.concat([percentage_df, membership_df]).drop_duplicates().reset_index(drop=True)
 final_df.sort_values(by = ["budget"], ascending = False, inplace = True)
-final_df.to_csv("C:/Users/lorga/Desktop/Lobby/Artikel/data.csv", index = False)
+final_df.to_csv(path.join(dir, "data.csv"), index = False)
 
-# Save edges
+# Save overall edges
 
 edges_list = [edge for edge in edges_list if edge[0] in final_df["registerNumber"].values and edge[1] in final_df["registerNumber"].values ]
 edges_df = pd.DataFrame(edges_list, columns = ["Source", "Target"])
 edges_df["Type"] = "Directed"
-edges_df.to_csv("C:/Users/lorga/Desktop/Lobby/Artikel/edges.csv", index = False)
+edges_df.to_csv(path.join(dir, "edges.csv"), index = False)
 
-# Save nodes
+# Save overall nodes
 
-nodes_df = final_df[["registerNumber", "name", "type", "budget", "zip", "interestPercentage"]]
+nodes_df = final_df[["registerNumber", "name", "activity_code", "activity", "budget", "zip", "interestPercentage"]]
 nodes_df.rename(columns = {"registerNumber": "Id", "name": "Label"}, inplace = True)
-nodes_df.to_csv("C:/Users/lorga/Desktop/Lobby/Artikel/nodes.csv", index = False)
+nodes_df.to_csv(path.join(dir, "nodes.csv"), index = False)

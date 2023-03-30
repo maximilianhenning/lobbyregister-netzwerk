@@ -1,21 +1,35 @@
 import pandas as pd
 import re
+from os import path
 
-df_initial = pd.read_json("C:/Users/lorga/Desktop/Lobby/Artikel/data raw.json", lines = True)
+dir = path.dirname(__file__)
+df_initial = pd.read_json(path.join(dir, "data raw.json"), lines = True)
 df_expand = pd.json_normalize(df_initial["registerEntryDetail"])
 df = pd.concat([df_initial, df_expand])
 
+print(df.columns)
+
 # Memberships
 
+completion_count = len(df["lobbyistIdentity.membershipEntries"].tolist())
 def membership_finder(membership_list):
+    if not "progress_counter" in globals():
+        global progress_counter 
+        progress_counter = 1
+    else:
+        progress_counter += 1
+    print((progress_counter / completion_count)*100, "%")
     if str(membership_list) == "nan":
         return "[]"
     register_list = []
     for name in membership_list:
+        # Remove content in normal and square brackets
         name = re.sub("[\(\[].*?[\)\]]", "", name)
-        assorted_bits = ["(", ")", " e.V.", " e. V."]
-        for assorted_bit in assorted_bits:
-            name = name.replace(assorted_bit, "")
+        # Remove extra brackets as well as e.V. and e. V.
+        name = re.sub("\(|\)|e\.V\.|e\. V\.", "", name)
+        #assorted_bits = ["(", ")", " e.V.", " e. V."]
+        #for assorted_bit in assorted_bits:
+        #    name = name.replace(assorted_bit, "")
         retrieved_index = df.loc[df["lobbyistIdentity.name"].str.contains(name, na = False) == True].index.values.astype(int)
         if retrieved_index.any():
             retrieved_index = retrieved_index[0]
@@ -61,14 +75,21 @@ def interest_calc(interest_list_input):
     return interest_percentage
 df["interestPercentage"] = df["fieldsOfInterest"].apply(interest_calc)
 
-# Save wrangled dataset
+# Agencies
+
+# Paste here once it works
+
+# Save wrangled overall dataset
+
+print("Saving...")
 
 df["name"] = df["lobbyistIdentity.name"]
-df["type"] = df["activity.de"]
+df["activity_code"] = df["activity.code"]
+df["activity"] = df["activity.de"]
 df["budget"] = df["financialExpensesEuro.to"]
 df["memberships"] = df["membershipRegisterNumbers"]
 df["zip"] = df["lobbyistIdentity.address.zipCode"]
 df["registerNumber"] = df["account.registerNumber"]
-df = df[["registerNumber", "name", "type", "budget", "zip", "fieldsOfInterest", "interestPercentage", "memberships"]]
+df = df[["registerNumber", "name", "activity_code", "activity", "budget", "zip", "fieldsOfInterest", "interestPercentage", "memberships"]]
 df.sort_values(by = ["budget"], ascending = False, inplace = True)
-df.to_csv("C:/Users/lorga/Desktop/Lobby/Artikel/data wrangled.csv", index = False)
+df.to_csv(path.join(dir, "data wrangled.csv"), index = False)
