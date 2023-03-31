@@ -11,14 +11,12 @@ df_full = pd.concat([df_initial, df_expand])
 df_consult = df_full.loc[df_full["activity.code"] == "ACT_CONSULTING"].reset_index().drop(columns = "index")
 file_path = path.join(dir, "agencies_manual_fix2.csv")
 df_consult_expand = pd.json_normalize(df_consult["clientOrganizations"])
-df_consult_expand.to_csv(path.join(dir, "agencies_manual_fix2.csv"), sep = ";")
-df_consult_expand = pd.read_csv(file_path, sep = ";")
 df = df_consult.join(df_consult_expand)
 
 column_list = df.columns.tolist()
 target_column_list = []
 for column in column_list:
-    if column.isdigit():
+    if type(column) == int:
         target_column_list.append(column)
 contract_dict = {}
 for index, row in df.iterrows():
@@ -30,8 +28,8 @@ for index, row in df.iterrows():
        name = " ".join(name)
     contractor_list = []
     for x in target_column_list:
-        if row[str(x)]:
-            result = str(row[str(x)])
+        if row[x]:
+            result = str(row[x])
             if result not in ["None", "nan"]:
                 json_string = result.replace("'s ", "s ").replace("O'R", "OR").replace("\'", "\"").replace("\\xa0", "")
                 try:
