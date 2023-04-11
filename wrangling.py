@@ -6,19 +6,18 @@ dir = path.dirname(__file__)
 df_initial = pd.read_json(path.join(dir, "data raw.json"), lines = True)
 df_expand = pd.json_normalize(df_initial["registerEntryDetail"])
 df = pd.concat([df_initial, df_expand])
-
-print(df.columns)
+df_contracting_expand = pd.json_normalize(df_expand["clientOrganizations"])
+df = df.join(df_contracting_expand)
 
 # Memberships
 
+global progress_counter
+progress_counter = 0
 completion_count = len(df["lobbyistIdentity.membershipEntries"].tolist())
 def membership_finder(membership_list):
-    if not "progress_counter" in globals():
-        global progress_counter 
-        progress_counter = 1
-    else:
-        progress_counter += 1
-    print((progress_counter / completion_count)*100, "%")
+    global progress_counter 
+    progress_counter += 1
+    print(str((progress_counter / completion_count)*100)[:5], "%")
     if str(membership_list) == "nan":
         return "[]"
     register_list = []
@@ -27,9 +26,6 @@ def membership_finder(membership_list):
         name = re.sub("[\(\[].*?[\)\]]", "", name)
         # Remove extra brackets as well as e.V. and e. V.
         name = re.sub("\(|\)|e\.V\.|e\. V\.", "", name)
-        #assorted_bits = ["(", ")", " e.V.", " e. V."]
-        #for assorted_bit in assorted_bits:
-        #    name = name.replace(assorted_bit, "")
         retrieved_index = df.loc[df["lobbyistIdentity.name"].str.contains(name, na = False) == True].index.values.astype(int)
         if retrieved_index.any():
             retrieved_index = retrieved_index[0]
@@ -75,17 +71,30 @@ def interest_calc(interest_list_input):
     return interest_percentage
 df["interestPercentage"] = df["fieldsOfInterest"].apply(interest_calc)
 
+# Simplify type
+
+def type_simplifier(activity_code):
+    if activity_code == "ACT_ORGANIZATION":
+        return "Unternehmen"
+    elif activity_code in ["ACT_TRADE_ASSOC", "ACT_PROFESSION_ASSOC", "ACT_PRIVATE_ORGA", "ACT_NONPROFIT_ORGA"]:
+        return "Verein/Verband"
+    elif activity_code == "ACT_CONSULTING":
+        return "Consulting"
+    else:
+        return "nan"
+df["type"] = df["activity.code"].apply(type_simplifier)
+
 # Save wrangled overall dataset
 
-print("Saving...")
-
 df["name"] = df["lobbyistIdentity.name"]
-df["activity_code"] = df["activity.code"]
-df["activity"] = df["activity.de"]
 df["budget"] = df["financialExpensesEuro.to"]
 df["memberships"] = df["membershipRegisterNumbers"]
 df["zip"] = df["lobbyistIdentity.address.zipCode"]
 df["registerNumber"] = df["account.registerNumber"]
-df = df[["registerNumber", "name", "activity_code", "activity", "budget", "zip", "fieldsOfInterest", "interestPercentage", "memberships"]]
+target_column_list = ["name", "type", "budget", "memberships", "zip", "registerNumber", "interestPercentage"]
+for column in df.columns:
+    if type(column) == int:
+        target_column_list.append(column)
+df = df[target_column_list]
 df.sort_values(by = ["budget"], ascending = False, inplace = True)
 df.to_csv(path.join(dir, "data wrangled.csv"), index = False)
