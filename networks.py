@@ -5,33 +5,39 @@ from os import path
 dir = path.dirname(__file__)
 df = pd.read_csv(path.join(dir, "data wrangled.csv"))
 
-# Create edges
+# Memberships
 
-edges_table = []
-edges_list = []
+membership_edges_table = []
+membership_edges_list = []
 memberships_dict = {}
 
-def edge_creator(registerNumber, memberships):
-    edges_list = []
+def membership_edge_creator(registerNumber, memberships):
+    membership_edges_list = []
     if memberships == "nan":
-        return edges_list
+        return membership_edges_list
     memberships = memberships.strip("][").split(", ")
     for membership in memberships:
         if membership:
             membership = membership.replace("'", "")
-            edges_list.append([registerNumber, membership])
-    return edges_list
-edges_table = df.apply(lambda x: edge_creator(x.registerNumber, x.memberships), axis = 1)
+            membership_edges_list.append([registerNumber, membership])
+    return membership_edges_list
+membership_edges_table = df.apply(lambda x: membership_edge_creator(x.registerNumber, x.memberships), axis = 1)
 
-for line in edges_table:
+for line in membership_edges_table:
     for list in line:
-        edges_list.append(list)
+        membership_edges_list.append(list)
         if not list[1] in memberships_dict:
             memberships_dict[list[1]] = [list[0]]
         else:
             memberships_dict[list[1]].append(list[0])
 
-# Create final dataset with only organisations with above 0.15 interest percentage or with more than four such organisations as members
+# Contractors
+
+# XXXX
+
+# Create final dataset with only organisations with above 0.15 interest percentage,
+# or with more than four such organisations as members,
+# or that has contracted or been contracted by such an organisation
 
 percentage_df = df[df["interestPercentage"] > 0.15]
 def member_counter(dict):
@@ -46,6 +52,7 @@ def member_counter(dict):
     return memberships_with_interest_list
 memberships_with_interest_list = member_counter(memberships_dict)
 membership_df = df[df["registerNumber"].isin(memberships_with_interest_list)]
+# XXXX Add contractors
 
 # Save final overall dataset
 
@@ -55,8 +62,8 @@ final_df.to_csv(path.join(dir, "data.csv"), index = False)
 
 # Save overall edges
 
-edges_list = [edge for edge in edges_list if edge[0] in final_df["registerNumber"].values and edge[1] in final_df["registerNumber"].values ]
-edges_df = pd.DataFrame(edges_list, columns = ["Source", "Target"])
+membership_edges_list = [edge for edge in membership_edges_list if edge[0] in final_df["registerNumber"].values and edge[1] in final_df["registerNumber"].values ]
+edges_df = pd.DataFrame(membership_edges_list, columns = ["Source", "Target"])
 edges_df["Type"] = "Directed"
 edges_df.to_csv(path.join(dir, "edges.csv"), index = False)
 

@@ -43,14 +43,19 @@ for index, row in df.iterrows():
                     else:
                         contractor_name = re.sub(r"['\[\]]", "", str(df_sub["name"].values))
                         # df names will need to be changed when incorporated into wrangling
-                        retrieved_index_array = df_full.loc[df_full["lobbyistIdentity.name"].str.contains(contractor_name, na = False) == True].index.values
+                        retrieved_index_array = df_full.index[df_full["lobbyistIdentity.name"].str.contains(contractor_name, na = False) == True]
                         if retrieved_index_array.size > 0:
-                            retrieved_index = int(re.sub(r"\[|\]", "", str(retrieved_index_array)))
-                        if retrieved_index in locals():
+                            retrieved_index = retrieved_index_array[0]
+                        if "retrieved_index" in locals():
                             contractor_register_number = df_full.loc[retrieved_index]["registerNumber"].values.astype(str)[0]
                             del retrieved_index
                             contractor_list.append(contractor_register_number)
                 except Exception as e:
                     print(e)
-    contract_dict[register_number] = contractor_list
+    for contractor in contractor_list:
+        if contractor in contract_dict.keys():
+            contract_dict[contractor].append(register_number)
+        else:
+            contract_dict[contractor] = [register_number]
 print(contract_dict)
+print(len(contract_dict.keys()))

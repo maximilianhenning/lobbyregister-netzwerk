@@ -75,10 +75,6 @@ def interest_calc(interest_list_input):
     return interest_percentage
 df["interestPercentage"] = df["fieldsOfInterest"].apply(interest_calc)
 
-# Agencies
-
-# Paste here once it works
-
 # Save wrangled overall dataset
 
 print("Saving...")
